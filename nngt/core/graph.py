@@ -943,12 +943,6 @@ class Graph(nngt.core.GraphObject):
         '''
         Attributes of the graph's edges.
 
-        .. versionchanged:: 1.0
-            Returns the full dict of edges attributes if called without
-            arguments.
-
-        .. versionadded:: 0.8
-
         Parameters
         ----------
         edge : tuple or list of tuples, optional (default: ``None``)
@@ -993,12 +987,6 @@ class Graph(nngt.core.GraphObject):
     def get_node_attributes(self, nodes=None, name=None):
         '''
         Attributes of the graph's edges.
-
-        .. versionchanged:: 1.0.1
-            Corrected default behavior and made it the same as
-            :func:`~nngt.Graph.get_edge_attributes`.
-
-        .. versionadded:: 0.9
 
         Parameters
         ----------
@@ -1236,9 +1224,6 @@ class Graph(nngt.core.GraphObject):
         '''
         Return the type of all or a subset of the edges.
 
-        .. versionchanged:: 1.0.1
-            Added the possibility to ask for a subset of edges.
-
         Parameters
         ----------
         edges : (E, 2) array, optional (default: all edges)
@@ -1257,9 +1242,6 @@ class Graph(nngt.core.GraphObject):
     def get_weights(self, edges=None):
         '''
         Returns the weights of all or a subset of the edges.
-
-        .. versionchanged:: 1.0.1
-            Added the possibility to ask for a subset of edges.
 
         Parameters
         ----------
@@ -1285,9 +1267,6 @@ class Graph(nngt.core.GraphObject):
     def get_delays(self, edges=None):
         '''
         Returns the delays of all or a subset of the edges.
-
-        .. versionchanged:: 1.0.1
-            Added the possibility to ask for a subset of edges.
 
         Parameters
         ----------

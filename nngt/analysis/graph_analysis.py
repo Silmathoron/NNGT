@@ -1100,8 +1100,6 @@ def binning(x, bins='bayes', log=False):
     Binning function providing automatic binning using Bayesian blocks in
     addition to standard linear and logarithmic uniform bins.
 
-    .. versionadded:: 0.7
-
     Parameters
     ----------
     x : array-like

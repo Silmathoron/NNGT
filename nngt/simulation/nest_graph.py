@@ -51,9 +51,6 @@ def make_nest_network(network, send_only=None, weights=True):
     Create a new network which will be filled with neurons and
     connector objects to reproduce the topology from the initial network.
 
-    .. versionchanged:: 0.8
-        Added `send_only` parameter.
-
     Parameters
     ----------
     network: :class:`nngt.Network` or :class:`nngt.SpatialNetwork`

@@ -556,8 +556,6 @@ def edge_attributes_distribution(network, attributes, edges=None,
     '''
     Return node `attributes` for a set of `nodes`.
 
-    .. versionadded:: 1.0.3
-
     Parameters
     ----------
     network : :class:`~nngt.Graph`

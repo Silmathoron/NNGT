@@ -41,6 +41,7 @@ from nngt.lib.sorting import _sort_groups, _sort_neurons
 from nngt.lib.logger import _log_message
 from nngt.plot import palette_discrete, markers
 from nngt.plot.plt_properties import _set_new_plot, _set_ax_lims
+from .nest_utils import nest_version, spike_rec
 
 
 logger = logging.getLogger(__name__)
@@ -59,17 +60,11 @@ def plot_activity(gid_recorder=None, record=None, network=None, gids=None,
     '''
     Plot the monitored activity.
 
-    .. versionchanged:: 1.2
-        Switched `hist` to `histogram` and default value to False.
-
-    .. versionchanged:: 1.0.1
-        Added `axis` parameter, restored missing `fignum` parameter.
-
     Parameters
     ----------
     gid_recorder : tuple or list of tuples, optional (default: None)
         The gids of the recording devices. If None, then all existing
-        "spike_detector"s are used.
+        "spike_recorder"s are used.
     record : tuple or list, optional (default: None)
         List of the monitored variables for each device. If `gid_recorder` is
         None, record can also be None and only spikes are considered.
@@ -152,8 +147,12 @@ def plot_activity(gid_recorder=None, record=None, network=None, gids=None,
             else:
                 lst_rec.append(rec)
     else:
-        lst_rec = nest.GetNodes(
-            (0,), properties={'model': 'spike_detector'})[0]
+        if nest_version == 3:
+            lst_rec = nest.GetNodes(properties={'model': spike_rec}).tolist()
+        else:
+            lst_rec = nest.GetNodes(
+                (0,), properties={'model': spike_rec})[0]
+
         record = tuple("spikes" for _ in range(len(lst_rec)))
 
     # get gids and groups
@@ -190,7 +189,7 @@ def plot_activity(gid_recorder=None, record=None, network=None, gids=None,
                 data = [[], []]
                 for rec in lst_rec:
                     info = nest.GetStatus([rec])[0]
-                    if str(info["model"]) == "spike_detector":
+                    if str(info["model"]) == spike_rec:
                         data[0].extend(info["events"]["senders"])
                         data[1].extend(info["events"]["times"])
                 data = np.array(data).T
@@ -255,9 +254,9 @@ def plot_activity(gid_recorder=None, record=None, network=None, gids=None,
             labels[info["model"]] = []
             lines[info["model"]] = []
 
-        if str(info["model"]) == "spike_detector":
-            if "spike_detector" in axes:
-                axis = axes["spike_detector"]
+        if str(info["model"]) == spike_rec:
+            if spike_rec in axes:
+                axis = axes[spike_rec]
             c = colors[num_raster]
             times, senders = info["events"]["times"], info["events"]["senders"]
             sorted_ids = sorted_neurons[senders]
@@ -273,10 +272,10 @@ def plot_activity(gid_recorder=None, record=None, network=None, gids=None,
             num_raster += 1
             if l:
                 fig_raster = l[0].figure.number
-                fignums['spike_detector'] = fig_raster
-                axes['spike_detector'] = l[0].axes
-                labels["spike_detector"].append(lbl)
-                lines["spike_detector"].extend(l)
+                fignums[spike_rec] = fig_raster
+                axes[spike_rec] = l[0].axes
+                labels[spike_rec].append(lbl)
+                lines[spike_rec].extend(l)
                 if histogram:
                     axes['histogram'] = l[1].axes
         elif "detector" in str(info["model"]):
@@ -360,8 +359,8 @@ def plot_activity(gid_recorder=None, record=None, network=None, gids=None,
             lines[info["model"]].extend(lines_tmp)
             num_meter += 1
 
-    if "spike_detector" in axes:
-        ax = axes['spike_detector']
+    if spike_rec in axes:
+        ax = axes[spike_rec]
 
         if limits is not None:
             ax.set_xlim(limits[0], limits[1])
@@ -406,12 +405,6 @@ def raster_plot(times, senders, limits=None, title="Spike raster",
     """
     Plotting routine that constructs a raster plot along with
     an optional histogram.
-
-    .. versionchanged:: 1.2
-        Switched `hist` to `histogram`.
-
-    .. versionchanged:: 1.0.1
-        Added `axis` parameter.
 
     Parameters
     ----------

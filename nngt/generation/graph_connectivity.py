@@ -123,8 +123,6 @@ def all_to_all(nodes=0, weighted=True, directed=True, multigraph=False,
     """
     Generate a graph where all nodes are connected.
 
-    .. versionadded:: 1.0
-
     Parameters
     ----------
     nodes : int, optional (default: None)

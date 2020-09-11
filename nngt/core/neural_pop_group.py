@@ -207,9 +207,6 @@ class NeuralPop(Structure):
         Make a NeuralPop of identical neurons belonging to a single "default"
         group.
 
-        .. versionchanged:: 1.2
-            Added `neuron_type` and `meta_groups` parameters
-
         Parameters
         ----------
         size : int
@@ -260,12 +257,6 @@ class NeuralPop(Structure):
         '''
         Make a NeuralPop with a given ratio of inhibitory and excitatory
         neurons.
-
-        .. versionchanged:: 0.8
-            Added `syn_spec` parameter.
-
-        .. versionchanged:: 1.2
-            Added `meta_groups` parameter
 
         Parameters
         ----------
@@ -426,8 +417,6 @@ class NeuralPop(Structure):
     def nest_gids(self):
         '''
         Return the NEST gids of the nodes inside the population.
-
-        .. versionadded:: 1.3
         '''
         gids = []
 
@@ -440,8 +429,6 @@ class NeuralPop(Structure):
     def excitatory(self):
         '''
         Return the ids of all excitatory nodes inside the population.
-
-        .. versionadded:: 1.3
         '''
         ids = []
 
@@ -455,8 +442,6 @@ class NeuralPop(Structure):
     def inhibitory(self):
         '''
         Return the ids of all inhibitory nodes inside the population.
-
-        .. versionadded:: 1.3
         '''
         ids = []
 
@@ -492,8 +477,6 @@ class NeuralPop(Structure):
                     'delay': ('normal', 5., 2.)}
                 }
             }
-
-        .. versionadded:: 0.8
         '''
         return deepcopy(self._syn_spec)
 
@@ -636,8 +619,6 @@ class NeuralPop(Structure):
     def set_neuron_param(self, params, neurons=None, group=None):
         '''
         Set the parameters of specific neurons or of a whole group.
-
-        .. versionadded:: 1.0
 
         Parameters
         ----------

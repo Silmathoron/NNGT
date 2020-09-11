@@ -117,8 +117,6 @@ def total_firing_rate(network=None, spike_detector=None, nodes=None, data=None,
     Firing rate is obtained as the convolution of the spikes with a Gaussian
     kernel characterized by a standard deviation and a temporal shift.
 
-    .. versionadded:: 0.7
-
     Parameters
     ----------
     network : :class:`nngt.Network`, optional (default: None)
@@ -201,14 +199,11 @@ def get_spikes(recorder=None, spike_times=None, senders=None, astype="ssp"):
     - each row i contains the spikes of neuron i (in NEST),
     - each column j contains the times of the jth spike for all neurons.
 
-    .. versionchanged:: 1.0
-        Neurons are now located in the row corresponding to their NEST GID.
-
     Parameters
     ----------
     recorder : tuple, optional (default: None)
         Tuple of NEST gids, where the first one should point to the
-        spike_detector which recorded the spikes.
+        spike_recorder which recorded the spikes.
     spike_times : array-like, optional (default: None)
         If `recorder` is not provided, the spikes' data can be passed directly
         through their `spike_times` and the associated `senders`.
@@ -248,9 +243,15 @@ def get_spikes(recorder=None, spike_times=None, senders=None, astype="ssp"):
         senders = data["senders"]
     elif spike_times is None and senders is None:
         import nest
-        nodes = nest.GetNodes(
-            (0,), properties={'model': 'spike_detector'})
-        data = nest.GetStatus(nodes[0])[0]["events"]
+        from nngt.simulation.nest_utils import nest_version, spike_rec
+        
+        if nest_version == 3:
+            rcrdrs = nest.GetNodes(properties={'model': spike_rec})
+        else:
+            rcrdrs = nest.GetNodes(
+                (0,), properties={'model': spike_rec})[0]
+
+        data = nest.GetStatus(nodes)[0]["events"]
         spike_times = data["times"]
         senders = data["senders"]
 
@@ -319,8 +320,13 @@ def _set_spike_data(data, spike_detector):
     import nest
     if not len(data[0]):
         if spike_detector is None:
-            spike_detector = nest.GetNodes(
-                (0,), properties={'model': 'spike_detector'})[0]
+            from nngt.simulation.nest_utils import nest_version, spike_rec
+            if nest_version == 3:
+                spike_detector = nest.GetNodes(properties={'model': spike_rec})
+            else:
+                spike_detector = nest.GetNodes(
+                    (0,), properties={'model': spike_rec})[0]
+
         events = nest.GetStatus(spike_detector, "events")
         for ev_dict in events:
             data[0].extend(ev_dict["senders"])

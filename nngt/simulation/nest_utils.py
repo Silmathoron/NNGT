@@ -42,8 +42,10 @@ from nngt.lib.sorting import _sort_groups
 try:
     from nest import NodeCollection
     nest_version = 3
+    spike_rec = "spike_recorder"
 except ImportError:
     nest_version = 2
+    spike_rec = "spike_detector"
 
 
 __all__ = [
@@ -243,9 +245,6 @@ def randomize_neural_states(network, instructions, groups=None, nodes=None,
     '''
     Randomize the neural states according to the instructions.
 
-    .. versionchanged:: 0.8
-        Changed `ids` to `nodes` argument.
-
     Parameters
     ----------
     network : :class:`~nngt.Network` subclass instance
@@ -327,7 +326,7 @@ def monitor_groups(group_names, network, nest_recorder=None, params=None):
         Names of the groups that should be recorded.
     network : :class:`~nngt.Network` or subclass
         Network which population will be used to differentiate groups.
-    nest_recorder : strings or list, optional (default: "spike_detector"0)
+    nest_recorder : strings or list, optional (default: "spike_recorder")
         Device(s) to monitor the network.
     params : dict or list of, optional (default: `{}`)
         Dictionarie(s) containing the parameters for each recorder (see
@@ -340,7 +339,7 @@ def monitor_groups(group_names, network, nest_recorder=None, params=None):
     recordables : list of the recordables' names.
     '''
     if nest_recorder is None:
-        nest_recorder = ["spike_detector"]
+        nest_recorder = [spike_rec]
     elif not nonstring_container(nest_recorder):
         nest_recorder = [nest_recorder]
 
@@ -349,7 +348,7 @@ def monitor_groups(group_names, network, nest_recorder=None, params=None):
     elif isinstance(params, dict):
         params = [params]
 
-    recorders   = NodeCollection([]) if nest_version == 3 else []
+    recorders   = NodeCollection() if nest_version == 3 else []
     recordables = []
 
     for name in group_names:
@@ -373,7 +372,7 @@ def monitor_nodes(gids, nest_recorder=None, params=None, network=None):
         GIDs of the neurons in the NEST subnetwork; either one list per
         recorder if they should monitor different neurons or a unique list
         which will be monitored by all devices.
-    nest_recorder : strings or list, optional (default: "spike_detector")
+    nest_recorder : strings or list, optional (default: "spike_recorder")
         Device(s) to monitor the network.
     params : dict or list of, optional (default: `{}`)
         Dictionarie(s) containing the parameters for each recorder (see
@@ -388,7 +387,7 @@ def monitor_nodes(gids, nest_recorder=None, params=None, network=None):
     recordables : list of the recordables' names.
     '''
     if nest_recorder is None:
-        nest_recorder = ["spike_detector"]
+        nest_recorder = [spike_rec]
     elif not nonstring_container(nest_recorder):
         nest_recorder = [nest_recorder]
 
@@ -402,7 +401,7 @@ def monitor_nodes(gids, nest_recorder=None, params=None, network=None):
 
 def _monitor(gids, nest_recorder, params):
     new_record = []
-    recorders  = NodeCollection([]) if nest_version == 3 else []
+    recorders  = NodeCollection() if nest_version == 3 else []
 
     gids = _get_nest_gids(gids)
 
@@ -449,15 +448,13 @@ def save_spikes(filename, recorder=None, network=None, save_positions=True,
     '''
     Plot the monitored activity.
 
-    .. versionadded:: 0.7
-
     Parameters
     ----------
     filename : str
         Path to the file where the activity should be saved.
     recorder : tuple or list of tuples, optional (default: None)
         The NEST gids of the recording devices. If None, then all existing
-        "spike_detector"s are used.
+        "spike_recorder"s are used.
     network : :class:`~nngt.Network` or subclass, optional (default: None)
         Network which activity will be monitored.
     save_positions : bool, optional (default: True)
@@ -465,7 +462,7 @@ def save_spikes(filename, recorder=None, network=None, save_positions=True,
         requires `network` to be provided.
     **kwargs : see :func:`numpy.savetxt`
     '''
-    rcrdrs = NodeCollection([]) if nest_version == 3 else []
+    rcrdrs = NodeCollection() if nest_version == 3 else []
 
     delim = kwargs.get('delimiter', ' ')
 
@@ -491,20 +488,20 @@ def save_spikes(filename, recorder=None, network=None, save_positions=True,
 
             if nest_version == 3:
                 if len(rcrdrs) == 1:
-                    assert recrdrs.model == "spike_detector", \
-                        'Only spike_detectors are supported.'
-                    assert recrdrs.model == ("spike_detector",)*len(rcrdrs), \
-                        'Only spike_detectors are supported.'
+                    assert recrdrs.model == spike_rec, \
+                        'Only spike_recorders are supported.'
+                    assert recrdrs.model == (spike_rec,)*len(rcrdrs), \
+                        'Only spike_recorders are supported.'
             else:
                 assert (nest.GetStatus(rcrdrs, 'model')
-                        == ('spike_detector',)*len(rcrdrs)), \
+                        == (spike_rec,)*len(rcrdrs)), \
                        'Only spike_detectors are supported.'
     else:
         if nest_version == 3:
-            rcrdrs = nest.GetNodes(properties={'model': 'spike_detector'})
+            rcrdrs = nest.GetNodes(properties={'model': spike_rec})
         else:
             rcrdrs = nest.GetNodes(
-                (0,), properties={'model': 'spike_detector'})[0]
+                (0,), properties={'model': spike_rec})[0]
 
     if network is not None and network.is_spatial() and save_positions:
         save_positions = True

@@ -327,8 +327,6 @@ class Structure(OrderedDict):
     def ids(self):
         '''
         Return all the ids of the nodes inside the structure.
-
-        .. versionadded:: 1.2
         '''
         ids = []
 
