@@ -585,6 +585,7 @@ class Graph(nngt.core.GraphObject):
         '''
         if nngt.get_config("mpi"):
             raise NotImplementedError("`copy` is not MPI-safe yet.")
+
         gc_instance = Graph(name=self._name + '_copy',
                             weighted=self.is_weighted(), copy_graph=self,
                             directed=self.is_directed())
@@ -592,7 +593,7 @@ class Graph(nngt.core.GraphObject):
         if self.is_spatial():
             nngt.SpatialGraph.make_spatial(
                 gc_instance, shape=self.shape.copy(),
-                positions=deepcopy(self._pos))
+                positions=self.get_positions())
 
         if self.is_network():
             nngt.Network.make_network(gc_instance, self.population.copy())
@@ -699,6 +700,64 @@ class Graph(nngt.core.GraphObject):
         g.new_node_attribute("name", "string", values=names)
 
         return g
+
+    def new_node(self, n=1, attributes=None, value_types=None, positions=None,
+                 groups=None):
+        '''
+        Adding a node to the graph, with optional properties.
+
+        .. versionchanged: 2.2
+            Removed `neuron_type` argument.
+
+        Parameters
+        ----------
+        n : int, optional (default: 1)
+            Number of nodes to add.
+        attributes : dict, optional (default: None)
+            Dictionary containing the attributes of the nodes.
+        value_types : dict, optional (default: None)
+            Dict of the `attributes` types, necessary only if the `attributes`
+            do not exist yet.
+        positions : array of shape (n, 2), optional (default: None)
+            Positions of the neurons. Valid only for
+            :class:`~nngt.SpatialGraph` or :class:`~nngt.SpatialNetwork`.
+        groups : str, int, or list, optional (default: None)
+            :class:`~nngt.core.NeuralGroup` to which the neurons belong. Valid
+            only for :class:`~nngt.Network` or :class:`~nngt.SpatialNetwork`.
+
+        Returns
+        -------
+        The node or a list of the nodes created.
+        '''
+        nodes = super().new_node(
+            n=n, attributes=attributes, value_types=value_types)
+
+        if positions is not None:
+            assert self.is_spatial(), \
+                "`positions` argument requires a SpatialGraph/SpatialNetwork."
+
+            if not nonstring_container(positions[0]):
+                positions = [positions]
+
+            self.set_node_attribute('position', values=positions, nodes=nodes)
+
+        if groups is not None:
+            assert self.structure is not None, \
+                "`groups` argument requires a structured graph."
+
+            if nonstring_container(groups):
+                assert len(groups) == n, "One group per neuron required."
+
+                for g, node in zip(groups, nodes):
+                    self.population.add_to_group(g, node)
+            else:
+                self.population.add_to_group(groups, nodes)
+
+        if n == 1:
+            return nodes[0]
+
+        return nodes
+        
 
     #-------------------------------------------------------------------------#
     # Getters

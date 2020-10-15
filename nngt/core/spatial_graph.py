@@ -87,7 +87,6 @@ class SpatialGraph(Graph):
         self.__class__.__max_id += 1
 
         self._shape = None
-        self._pos   = None
 
         super().__init__(nodes, name, weighted, directed, from_graph, **kwargs)
 
@@ -162,7 +161,10 @@ class SpatialGraph(Graph):
                     height, width, centroid=centroid, parent=self)
 
         b_rnd_pos = True if not self.node_nb() or positions is None else False
-        self._pos = self._shape.seed_neurons() if b_rnd_pos else positions
+
+        positions = self._shape.seed_neurons() if b_rnd_pos else positions
+
+        self.new_node_attribute("position", "object", values=positions)
 
         Connections.distances(self)
 
@@ -178,16 +180,7 @@ class SpatialGraph(Graph):
         nodes : int or array-like, optional (default: all nodes)
             List of the nodes for which the position should be returned.
         '''
-        if nodes is not None:
-            if nonstring_container(nodes):
-                # numpy slicing does not work with everything
-                nodes = np.asarray(nodes)
-
-                return np.array(self._pos[nodes])
-            else:
-                return self._pos[nodes]
-
-        return np.array(self._pos)
+        return self.get_node_attributes(nodes=nodes, name='position')
 
     def set_positions(self, positions, nodes=None):
         '''
@@ -200,9 +193,4 @@ class SpatialGraph(Graph):
         nodes : int or array-like, optional (default: all nodes)
             List of the nodes for which the position should be set.
         '''
-        if nodes is not None:
-            self._pos[nodes] = positions
-        else:
-            if len(positions) != self.node_nb():
-                raise ValueError("One position per node is required.")
-            self._pos = np.array(positions)
+        self.set_node_attribute('position', values=positions, nodes=nodes)

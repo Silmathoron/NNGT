@@ -74,7 +74,11 @@ class Connections:
             graph.set_edge_attribute(DIST, value_type="double", values=dlist)
             return dlist
         else:
-            pos = graph._pos if hasattr(graph, "_pos") else pos
+            if "position" in graph.node_attributes:
+                pos = graph.node_attributes["position"]
+
+            print(pos)
+
             # compute the new distances
             if graph.edge_nb():
                 ra_x = pos[elist[:,0], 0] - pos[elist[:,1], 0]

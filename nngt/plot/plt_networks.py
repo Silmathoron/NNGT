@@ -430,8 +430,10 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
                             edges = edges[:, ::decimate_connections]
                             if nonstring_container(esize):
                                 esize = esize[::decimate_connections]
+
                         # plot
                         ec = default_ecmap(ecolor[(src_name, tgt_name)])
+
                         if fast:
                             dl       = 0.5*np.max(nsize)
                             arrow_x  = pos[edges[1], 0] - pos[edges[0], 0]
@@ -441,7 +443,7 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
                             axis.quiver(
                                 pos[edges[0], 0], pos[edges[0], 1], arrow_x,
                                 arrow_y, scale_units='xy', angles='xy',
-                                scale=1, alpha=0.5, width=1.5e-3,
+                                scale=1, alpha=ealpha, width=1.5e-3,
                                 linewidths=0.5*esize, edgecolors=ec, zorder=1)
                         else:
                             for s, t in zip(edges[0], edges[1]):
@@ -535,7 +537,7 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
                 arrow_x -= np.sign(arrow_y) * dl
                 axis.quiver(pos[edges[:, 0], 0], pos[edges[:, 0], 1], arrow_x,
                             arrow_y, scale_units='xy', angles='xy', scale=1,
-                            alpha=0.5, width=1.5e-3, linewidths=0.5*esize,
+                            alpha=ealpha, width=1.5e-3, linewidths=0.5*esize,
                             edgecolors=ecolor, zorder=1)
             elif len(edges):
                 for i, (s, t) in enumerate(edges):

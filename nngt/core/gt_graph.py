@@ -465,8 +465,7 @@ class _GtGraph(GraphInterface):
 
         return edges[order, :2]
 
-    def new_node(self, n=1, neuron_type=1, attributes=None, value_types=None,
-                 positions=None, groups=None):
+    def new_node(self, n=1, attributes=None, value_types=None):
         '''
         Adding a node to the graph, with optional properties.
 
@@ -474,19 +473,11 @@ class _GtGraph(GraphInterface):
         ----------
         n : int, optional (default: 1)
             Number of nodes to add.
-        neuron_type : int, optional (default: 1)
-            Type of neuron (1 for excitatory, -1 for inhibitory)
         attributes : dict, optional (default: None)
             Dictionary containing the attributes of the nodes.
         value_types : dict, optional (default: None)
             Dict of the `attributes` types, necessary only if the `attributes`
             do not exist yet.
-        positions : array of shape (n, 2), optional (default: None)
-            Positions of the neurons. Valid only for
-            :class:`~nngt.SpatialGraph` or :class:`~nngt.SpatialNetwork`.
-        groups : str, int, or list, optional (default: None)
-            :class:`~nngt.core.NeuralGroup` to which the neurons belong. Valid
-            only for :class:`~nngt.Network` or :class:`~nngt.SpatialNetwork`.
 
         Returns
         -------
@@ -512,30 +503,6 @@ class _GtGraph(GraphInterface):
             if k not in attributes and self.get_attribute_type(k) == "double":
                 self.set_node_attribute(k, nodes=nodes, val=np.NaN)
 
-        if self.is_spatial():
-            old_pos      = self._pos
-            self._pos    = np.full((self.node_nb(), 2), np.NaN)
-            num_existing = len(old_pos) if old_pos is not None else 0
-            if num_existing != 0:
-                self._pos[:num_existing, :] = old_pos
-
-        if positions is not None:
-            assert self.is_spatial(), \
-                "`positions` argument requires a SpatialGraph/SpatialNetwork."
-            self._pos[nodes] = positions
-
-        if groups is not None:
-            assert self.is_network(), \
-                "`positions` argument requires a Network/SpatialNetwork."
-            if nonstring_container(groups):
-                assert len(groups) == n, "One group per neuron required."
-                for g, node in zip(groups, nodes):
-                    self.population.add_to_group(g, node)
-            else:
-                self.population.add_to_group(groups, nodes)
-
-        if n == 1:
-            return nodes[0]
         return nodes
 
     def delete_nodes(self, nodes):
