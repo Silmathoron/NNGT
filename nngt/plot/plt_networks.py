@@ -165,7 +165,14 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
                          dpi=dpi)
         axis = fig.add_subplot(111, frameon=0, aspect=1)
 
-    axis.set_axis_off()
+    # projections for geographic plots
+
+    proj = kwargs.get("proj", None)
+
+    kw = {} if proj is None else {"transform": proj}
+
+    if proj is None:
+        axis.set_axis_off()
 
     pos = None
 
@@ -280,19 +287,22 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
                                        - 0.2*node_color[idx2])
 
     # draw
-    pos = np.zeros((n, 2))
+    pos = kwargs.get("positions", None)
+
+    spatial *= (network.is_spatial() or positions is not None)
 
     if layout == "circular":
         pos = _circular_layout(network, nsize)
-    elif layout is None and spatial and network.is_spatial():
+    elif pos is None and spatial:
         if show_environment:
-            nngt.geometry.plot.plot_shape(network.shape, axis=axis,
-                                          show=False)
+            nngt.geometry.plot.plot_shape(network.shape, axis=axis, show=False)
 
         nodes = None if restrict_nodes is None else list(restrict_nodes)
 
         pos = network.get_positions(nodes=nodes)
-    else:
+
+    if pos is None:
+        pos = np.zeros((n, 2))
         pos[:, 0] = size[0]*(np.random.uniform(size=n)-0.5)
         pos[:, 1] = size[1]*(np.random.uniform(size=n)-0.5)
 
@@ -354,7 +364,7 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
                                  s=0.5*np.array(nsize)[ids],
                                  marker=markers[ids[0]], zorder=2,
                                  edgecolors=nborder_color,
-                                 linewidths=nborder_width)
+                                 linewidths=nborder_width, **kw)
             else:
                 ids = range(network.node_nb()) if restrict_nodes is None \
                       else restrict_nodes
@@ -362,11 +372,11 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
                 for i in ids:
                     axis.plot(pos[i, 0], pos[i, 1], c=c[i], ms=0.5*nsize[i],
                               marker=nshape[i], ls="", zorder=2,
-                              mec=nborder_color[i], mew=nborder_width)
+                              mec=nborder_color[i], mew=nborder_width, **kw)
         else:
             axis.scatter(pos[:, 0], pos[:, 1], c=c, s=0.5*np.array(nsize),
                          marker=nshape, zorder=2, edgecolor=nborder_color,
-                         linewidths=nborder_width)
+                         linewidths=nborder_width, **kw)
     else:
         axis.set_aspect(1.)
 
@@ -394,7 +404,7 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
         nodes.set_zorder(2)
         axis.add_collection(nodes)
 
-    if not show_environment or not spatial or not network.is_spatial():
+    if not show_environment or not spatial or proj is not None:
         # axis.get_data()
         _set_ax_lim(axis, pos[:, 0], pos[:, 1], xlims, ylims)
 
@@ -438,11 +448,13 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
                             arrow_x -= np.sign(arrow_x) * dl
                             arrow_y  = pos[edges[1], 1] - pos[edges[0], 1]
                             arrow_x -= np.sign(arrow_y) * dl
+
                             axis.quiver(
                                 pos[edges[0], 0], pos[edges[0], 1], arrow_x,
                                 arrow_y, scale_units='xy', angles='xy',
                                 scale=1, alpha=0.5, width=1.5e-3,
-                                linewidths=0.5*esize, edgecolors=ec, zorder=1)
+                                linewidths=0.5*esize, edgecolors=ec, zorder=1,
+                                **kw)
                         else:
                             for s, t in zip(edges[0], edges[1]):
                                 xs, ys = pos[s, 0], pos[s, 1]
