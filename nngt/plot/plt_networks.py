@@ -289,7 +289,7 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
     # draw
     pos = kwargs.get("positions", None)
 
-    spatial *= (network.is_spatial() or positions is not None)
+    spatial *= (network.is_spatial() or pos is not None)
 
     if layout == "circular":
         pos = _circular_layout(network, nsize)

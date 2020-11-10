@@ -96,6 +96,13 @@ convertors = {
     'Congo': 'Republic of the Congo',
     'Czechia': 'Czech Republic',
     'Gambia': 'The Gambia',
+    'Netherlands Antilles (former)': 'Curaçao',
+    'Falkland Islands (Malvinas)': 'Falkland Islands',
+    'Viet Nam': 'Vietnam',
+    'Saint Helena, Ascension and Tristan da Cunha': 'Saint Helena',
+    'Pitcairn': 'Pitcairn Islands',
+    'Micronesia (Federated States of)': 'Federated States of Micronesia',
+    'French Southern Territories': 'French Southern and Antarctic Lands'
 }
 
 
