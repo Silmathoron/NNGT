@@ -89,7 +89,7 @@ def local_clustering_binary_undirected(g, nodes=None):
     u = GraphView(u, efilt=label_parallel_edges(u).fa == 0)
 
     # compute clustering
-    lc = gtc.local_clustering(u, weight=None, undirected=True).a
+    lc = np.array(gtc.local_clustering(u, weight=None, undirected=True).a)
 
     if nodes is None:
         return lc

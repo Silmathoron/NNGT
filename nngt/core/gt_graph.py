@@ -815,7 +815,8 @@ class _GtGraph(GraphInterface):
             return self._graph.degree_property_map(
                 mode, weight=w).a[nodes]
 
-        return self._graph.degree_property_map(mode, weight=w).a.flatten()
+        return np.array(
+            self._graph.degree_property_map(mode, weight=w).a).flatten()
 
     def is_connected(self, mode="strong"):
         '''

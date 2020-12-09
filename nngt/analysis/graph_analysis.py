@@ -332,7 +332,7 @@ def small_world_propensity(g, directed=True, use_global_clustering=False,
     This implementation differs slightly from the `original implementation
     <https://github.com/KordingLab/nctpy>`_ as it can also use the global
     instead of the average clustering coefficient, the diameter instead of
-    the avreage path length, and it is generalized to directed networks.
+    the average path length, and it is generalized to directed networks.
 
     References
     ----------
@@ -423,8 +423,18 @@ def small_world_propensity(g, directed=True, use_global_clustering=False,
             combine_weights=combine_weights))
 
     # compute deltas
-    delta_l = (l_g - l_rand) / (l_latt - l_rand) if l_latt != l_rand else 1.
-    delta_c = (c_latt - c_g) / (c_latt - c_rand)
+    delta_l, delta_c = 0., 0.
+
+    if np.isclose(l_latt, l_rand):
+        delta_l = 0. if np.isclose(l_g, l_rand) else 1
+    else:
+        delta_l = (l_g - l_rand) / (l_latt - l_rand)
+
+
+    if np.isclose(c_latt, c_rand):
+        delta_l = 0. if np.isclose(c_g, c_rand) else 1
+    else:
+        delta_c = (c_latt - c_g) / (c_latt - c_rand)
 
     if return_deviations:
         return 1 - np.sqrt(

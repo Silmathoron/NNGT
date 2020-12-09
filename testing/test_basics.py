@@ -736,9 +736,6 @@ def test_delete():
     g.delete_edges(edges[:2])
 
     # test copy after edge deletion
-    print("---")
-    print(g.node_nb())
-    print(g.edge_nb(), [len(attr) for attr in g.edge_attributes.values()])
     h = g.copy()
 
     assert np.all(np.isclose(h.get_weights(), g.get_weights()))
