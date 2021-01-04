@@ -665,14 +665,14 @@ def _circular_directed_recip(node_ids, coord_nb, reciprocity,
             # closest connections are the first ones, so if
             # num_recip = k*num_nodes + l then we reverse all first k*num_nodes
             # then we randomly chose the remaining l
-            remainder = num_recip % num_nodes
+            remainder = num_recip % nodes
             rounds    = num_recip - remainder
             
             sources[-num_recip:-num_recip + rounds] = targets[:rounds]
             targets[-num_recip:-num_recip + rounds] = sources[:rounds]
 
             # chose randomly the remaining connections
-            stop = min(rounds + num_nodes, edges)
+            stop = min(rounds + nodes, edges)
             chosen = rng.choice([i for i in range(rounds, stop)],
                                 size=remainder, replace=False)
 
@@ -682,19 +682,24 @@ def _circular_directed_recip(node_ids, coord_nb, reciprocity,
             # deterministic (ordered) closest connections, only for the
             # lattice rewiring (see function _lattice_shuffle_eattr)
             # closest connections are the first ones
-            remainder = num_recip % num_nodes
+            remainder = num_recip % nodes
             rounds    = num_recip - remainder
 
-            sources[-num_recip:-num_recip + rounds] = targets[:rounds]
-            targets[-num_recip:-num_recip + rounds] = sources[:rounds]
+            start = edges - num_recip
+            stop  = edges - num_recip + rounds
+
+            sources[start:stop] = targets[:rounds]
+            targets[start:stop] = sources[:rounds]
 
             # chose randomly the remaining connections
-            stop = min(rounds + num_nodes, edges)
-            chosen = rng.choice([i for i in range(rounds, stop)],
-                                size=remainder, replace=False)
+            start = stop
+            stop  = min(rounds + nodes, edges)
 
-            sources[-num_recip + rounds:] = targets[chosen]
-            targets[-num_recip + rounds:] = sources[chosen]
+            chosen = rng.choice(list(range(rounds, stop)), size=remainder,
+                                replace=False)
+
+            sources[start:] = targets[chosen]
+            targets[start:] = sources[chosen]
 
     return np.array([sources, targets], dtype=int).T
 

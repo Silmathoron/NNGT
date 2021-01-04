@@ -122,7 +122,7 @@ def lattice_rewire(g, target_reciprocity=1., node_attr_constraints=None,
         raise ValueError("`distance_sort` must be either 'linear' or "
                          "'inverse'.")
 
-    if directed and target_reciprocity != 1:
+    if not directed and target_reciprocity != 1:
         raise ValueError("Reciprocity is always 1 for undirected graphs.")
 
     # init graph and edges
