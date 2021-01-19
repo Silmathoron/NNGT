@@ -27,6 +27,7 @@ import nngt
 from nngt.generation import graph_connectivity as gc
 from nngt.lib import is_iterable, nonstring_container
 from nngt.lib.test_functions import deprecated
+from nngt.lib.rng_tools import _generate_random
 
 
 __all__ = [
@@ -53,7 +54,9 @@ _di_gen_edges = {
 }
 
 
-_one_pop_models = {"newman_watts", "watts_strogatz", "circular"}
+_one_pop_models = {
+    "circular", "newman_watts", "price_scale_free", "watts_strogatz",
+}
 
 
 def connect_nodes(network, sources, targets, graph_model, density=None,
@@ -116,9 +119,19 @@ def connect_nodes(network, sources, targets, graph_model, density=None,
     attr = {}
 
     if 'weights' in kwargs:
-        attr['weight'] = kwargs['weights']
+        ww = kwargs['weights']
+
+        if isinstance(ww, dict):
+            attr['weight'] = _generate_random(len(elist), ww)
+        else:
+            attr['weight'] = ww
     if 'delays' in kwargs:
-        attr['delay'] = kwargs['delays']
+        dd = kwargs['delays']
+
+        if isinstance(ww, dict):
+            attr['delay'] = _generate_random(len(elist), dd)
+        else:
+            attr['delay'] = dd
     if network.is_spatial() and distance:
         attr['distance'] = distance
 

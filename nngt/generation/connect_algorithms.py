@@ -43,7 +43,6 @@ __all__ = [
     "_random_scale_free",
     "_unique_rows",
     "_watts_strogatz",
-    "price_network",
 ]
 
 logger = logging.getLogger(__name__)
@@ -97,7 +96,7 @@ def _all_to_all(source_ids, target_ids, directed=True, multigraph=False,
                 edges[current_edges:next_enum, 1] = target_ids
                 current_edges = next_enum
     else:
-        edges       = np.empty((num_edges, 2))
+        edges       = np.empty((num_edges, 2), dtype=int)
         edges[:, 0] = np.repeat(source_ids, num_targets)
         edges[:, 1] = np.tile(target_ids, num_sources)
 
@@ -112,7 +111,7 @@ def _all_to_all(source_ids, target_ids, directed=True, multigraph=False,
 
 
 def _total_degree_list(source_ids, target_ids, degree_list, directed=True,
-                       multigraph=False):
+                       multigraph=False, **kwargs):
     ''' Called from _from_degree_list '''
     degree_list = np.array(degree_list, dtype=int)
 
@@ -533,12 +532,72 @@ def _erdos_renyi(source_ids, target_ids, density=None, edges=None,
     return ia_edges
 
 
-def _price_scale_free():
-    pass
+def _price_scale_free(ids, m, c, gamma, reciprocity, directed, multigraph,
+                      **kwargs):
+    '''
+    Generate a Price network.
+    '''
+    ids = np.array(ids).astype(int)
+
+    num_nodes = len(ids)
+
+    assert isinstance(m, int) and m >= 0, "`m` must be a positive integer."
+
+    if directed:
+        assert c > 0, "`c` > 0 is required for directed graphs."
+    else:
+        assert c > -1, "`c` > -1 is required for undirected graphs."
+
+    assert 0 <= reciprocity <= 1, "`reciprocity` must be in [0, 1]."
+
+    in_degrees = np.zeros(num_nodes)
+
+    edges = []
+    edges_hash = set()
+    recip_hash = None if directed else set()
+
+    rng = nngt._rng
+
+    for i, n in zip(range(1, num_nodes), ids[1:]):
+        proba = None if i == 1 else np.power(in_degrees[:i], gamma) + c
+
+        if proba is not None:
+            proba /= proba.sum()
+
+        edges_i = []
+
+        m_i = min(i, m)
+
+        while len(edges_i) < m_i:
+            targets = rng.choice(i, size=m_i, replace=False, p=proba)
+
+            for t in targets:
+                e = (n, ids[t])
+
+                if e not in edges_hash:
+                    if directed:
+                        edges_i.append(e)
+                        in_degrees[t] += 1
+                    elif e not in recip_hash:
+                        edges_i.append(e)
+                        in_degrees[i] += 1
+                        in_degrees[t] += 1
+
+        edges.extend(edges_i)
+
+        if directed and reciprocity > 0:
+            make_recip = rng.random(m) < reciprocity
+
+            for b, e in zip(make_recip, edges_i):
+                if b:
+                    edges.append(e[::-1])
+                    in_degrees[i] += 1
+
+    return edges
 
 
-def _circular(source_ids, target_ids, coord_nb, reciprocity, directed,
-              reciprocity_choice="random"):
+def _circular(source_ids, target_ids, coord_nb, reciprocity=1, directed=True,
+              reciprocity_choice="random", **kwargs):
     '''
     Circular graph.
 
@@ -567,7 +626,7 @@ def _circular(source_ids, target_ids, coord_nb, reciprocity, directed,
 
 
 def _circular_directed_recip(node_ids, coord_nb, reciprocity,
-                             reciprocity_choice="random"):
+                             reciprocity_choice="random", **kwargs):
     ''' Circular graph with given reciprocity '''
     nodes    = len(node_ids)
     edges    = int(0.5*nodes*coord_nb*(1 + reciprocity))
@@ -640,7 +699,7 @@ def _circular_directed_recip(node_ids, coord_nb, reciprocity,
     return np.array([sources, targets], dtype=int).T
 
 
-def _circular_full(node_ids, coord_nb, directed):
+def _circular_full(node_ids, coord_nb, directed, **kwargs):
     ''' Create a circular graph with all possible edges '''
     nodes = len(node_ids)
 
@@ -992,27 +1051,3 @@ def _distance_rule(source_ids, target_ids, density=None, edges=None,
         ia_edges = np.array([sources, targets]).T
 
     return ia_edges
-
-
-def price_network(*args, **kwargs):
-    #@todo: do it for other libraries
-    raise NotImplementedError("Not implemented except for graph-tool.")
-
-
-if nngt.get_config("backend") == "graph-tool":
-    from graph_tool.generation import price_network as _pn
-
-    def price_network(*args, **kwargs):
-        weighted   = kwargs.get("weighted", True)
-        directed   = kwargs.get("directed", True)
-        population = kwargs.get("population", None)
-        shape      = kwargs.get("shape", None)
-        for k in ("weighted", "directed", "population", "shape"):
-            try:
-                del kwargs[k]
-            except KeyError:
-                pass
-        g = _pn(*args, **kwargs)
-        return Graph.from_library(
-            g, weighted=weighted, directed=directed, population=population,
-            shape=shape, **kwargs)

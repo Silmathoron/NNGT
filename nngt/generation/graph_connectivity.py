@@ -34,6 +34,21 @@ from nngt.lib.test_functions import (mpi_checker, mpi_random, deprecated,
                                      on_master_process)
 
 
+__all__ = [
+    'all_to_all',
+    'circular',
+    'distance_rule',
+    'erdos_renyi',
+    'fixed_degree',
+    'from_degree_list',
+    'gaussian_degree',
+    'newman_watts',
+    'random_scale_free',
+    'price_scale_free',
+    'watts_strogatz',
+]
+
+
 # do default import
 
 from .connect_algorithms import *
@@ -46,7 +61,6 @@ if nngt.get_config("multithreading"):
     logger = logging.getLogger(__name__)
     try:
         from .cconnect import *
-        from .connect_algorithms import price_network
         using_mt_algorithms = True
         _log_message(logger, "DEBUG",
                      "Using multithreaded algorithms compiled on install.")
@@ -75,7 +89,6 @@ if nngt.get_config("multithreading"):
             nngt.lib.mpi_barrier()
 
             from .cconnect import *
-            from .connect_algorithms import price_network
 
             using_mt_algorithms = True
 
@@ -96,21 +109,6 @@ if nngt.get_config("mpi"):
     except ImportError as e:
         nngt._config['mpi'] = False
         raise e
-
-
-__all__ = [
-    'all_to_all',
-    'circular',
-	'distance_rule',
-	'erdos_renyi',
-    'fixed_degree',
-    'from_degree_list',
-    'gaussian_degree',
-	'newman_watts',
-	'random_scale_free',
-	'price_scale_free',
-    'watts_strogatz',
-]
 
 
 # ----------------------------- #
@@ -151,7 +149,7 @@ def all_to_all(nodes=0, weighted=True, directed=True, multigraph=False,
 
     Note
     ----
-	`nodes` is required unless `population` is provided.
+    `nodes` is required unless `population` is provided.
 
     Returns
     -------
@@ -271,7 +269,7 @@ def fixed_degree(degree, degree_type='in', nodes=0, reciprocity=-1.,
         The type of the fixed degree, among ``'in'``, ``'out'`` or ``'total'``.
 
         @todo
-			`'total'` not implemented yet.
+            `'total'` not implemented yet.
 
     nodes : int, optional (default: None)
         The number of nodes in the graph.
@@ -301,9 +299,9 @@ def fixed_degree(degree, degree_type='in', nodes=0, reciprocity=-1.,
 
     Note
     ----
-	`nodes` is required unless `from_graph` or `population` is provided.
-	If an `from_graph` is provided, all preexistant edges in the
-	object will be deleted before the new connectivity is implemented.
+    `nodes` is required unless `from_graph` or `population` is provided.
+    If an `from_graph` is provided, all preexistant edges in the
+    object will be deleted before the new connectivity is implemented.
 
     Returns
     -------
@@ -354,7 +352,7 @@ def gaussian_degree(avg, std, degree_type='in', nodes=0, reciprocity=-1.,
     avg : float
         The value of the average degree.
     std : float
-		The standard deviation of the Gaussian distribution.
+        The standard deviation of the Gaussian distribution.
     degree_type : str, optional (default: 'in')
         The type of the fixed degree, among 'in', 'out' or 'total' (or the
         full version: 'in-degree'...)
@@ -392,9 +390,9 @@ def gaussian_degree(avg, std, degree_type='in', nodes=0, reciprocity=-1.,
 
     Note
     ----
-	`nodes` is required unless `from_graph` or `population` is provided.
-	If an `from_graph` is provided, all preexistant edges in the object
-	will be deleted before the new connectivity is implemented.
+    `nodes` is required unless `from_graph` or `population` is provided.
+    If an `from_graph` is provided, all preexistant edges in the object
+    will be deleted before the new connectivity is implemented.
     """
     # set node number and library graph
     graph_gd = from_graph
@@ -479,9 +477,9 @@ def erdos_renyi(density=None, nodes=0, edges=None, avg_deg=None,
 
     Note
     ----
-	`nodes` is required unless `from_graph` or `population` is provided.
-	If an `from_graph` is provided, all preexistant edges in the
-	object will be deleted before the new connectivity is implemented.
+    `nodes` is required unless `from_graph` or `population` is provided.
+    If an `from_graph` is provided, all preexistant edges in the
+    object will be deleted before the new connectivity is implemented.
     """
     # set node number and library graph
     graph_er = from_graph
@@ -565,11 +563,11 @@ def random_scale_free(in_exp, out_exp, nodes=0, density=None, edges=None,
 
     Note
     ----
-	As reciprocity increases, requested values of `in_exp` and `out_exp`
-	will be less and less respected as the distribution will converge to a
-	common exponent :math:`\gamma = (\gamma_i + \gamma_o) / 2`.
-	Parameter `nodes` is required unless `from_graph` or `population` is
-	provided.
+    As reciprocity increases, requested values of `in_exp` and `out_exp`
+    will be less and less respected as the distribution will converge to a
+    common exponent :math:`\gamma = (\gamma_i + \gamma_o) / 2`.
+    Parameter `nodes` is required unless `from_graph` or `population` is
+    provided.
     """
     # set node number and library graph
     graph_rsf = from_graph
@@ -596,26 +594,26 @@ def random_scale_free(in_exp, out_exp, nodes=0, density=None, edges=None,
     return graph_rsf
 
 
-def price_scale_free(m, c=None, gamma=1, nodes=0, weighted=True, directed=True,
-                     seed_graph=None, multigraph=False, name="PriceSF",
-                     shape=None, positions=None, population=None,
-                     from_graph=None, **kwargs):
-    """
-    @todo
-    make the algorithm.
-
+def price_scale_free(m, c=None, gamma=1, nodes=0, reciprocity=0, weighted=True,
+                     directed=True, multigraph=False, name="PriceSF",
+                     shape=None, positions=None, population=None, **kwargs):
+    r'''
     Generate a Price graph model (Barabasi-Albert if undirected).
 
     Parameters
     ----------
     m : int
         The number of edges each new node will make.
-    c : double
+    c : double, optional (0 if undirected, else 1)
         Constant added to the probability of a vertex receiving an edge.
-    gamma : double
+    gamma : double, optional (default: 1)
         Preferential attachment power.
     nodes : int, optional (default: None)
         The number of nodes in the graph.
+    reciprocity : float, optional (default: 0)
+        Reciprocity of the graph (between 0 and 1). For directed graphs, this
+        will be the probability of the target node connecting back to the
+        source node when a new edge is added.
     weighted : bool, optional (default: True)
         Whether the graph edges have weights.
     directed : bool, optional (default: True)
@@ -632,8 +630,6 @@ def price_scale_free(m, c=None, gamma=1, nodes=0, weighted=True, directed=True,
     population : :class:`~nngt.NeuralPop`, optional (default: None)
         Population of neurons defining their biological properties (to create a
         :class:`~nngt.Network`).
-    from_graph : :class:`~nngt.Graph` or subclass, optional (default: None)
-        Initial graph whose nodes are to be connected.
 
     Returns
     -------
@@ -641,20 +637,67 @@ def price_scale_free(m, c=None, gamma=1, nodes=0, weighted=True, directed=True,
 
     Note
     ----
-	`nodes` is required unless `from_graph` or `population` is provided.
-    """
-    nodes = ( ( population.size if population is not None else nodes )
-              if from_graph is None else from_graph.node_nb() )
-    #~ c = c if c is not None else 0 if directed else 1
+    `nodes` is required unless `population` is provided.
 
-    g = price_network(nodes, m, c, gamma, directed, seed_graph)
-    graph_obj_price = nngt.Graph.from_library(g)
+    Notes
+    -----
+    The (generalized) Price network is either a directed or undirected graph
+    (the latter is better known as the Barabási-Albert network).
+    It is generated via a growth process, adding a new node at each step and
+    connecting it to :math:`m` previous nodes, chosen with probability:
 
-    graph_price = nngt.Graph.from_library(g)
+    .. math::
 
-    _set_options(graph_price, population, shape, positions)
-    graph_price._graph_type = "price_scale_free"
-    return graph_price
+        p \propto k^\gamma + c
+
+    where :math:`k` is the (in-)degree of the vertex.
+
+    We must therefore have :math:`c \ge 0` for directed graphs and
+    :math:`c > -1` for undirected graphs.
+
+    If the `reciprocity` :math:`r` is non-zero, each targeted node reciprocates
+    the connection with probability :math:`r`.
+    Expected reciprocity of the final graph is :math:`2r / (1 + r)`.
+
+    If :math:`\gamma=1`, and `reciprocity` is zero, the tail of resulting
+    in-degree distribution of the directed case is given by
+
+    .. math::
+
+        P_{k_{in}} \sim k_{in}^{-(2 + c/m)},
+
+    or for the undirected case
+
+    .. math::
+
+        P_{k} \sim k^{-(3 + c/m)}.
+
+    However, if :math:`\gamma \ne 1`, the in-degree distribution is not
+    scale-free.
+    '''
+    c = c if c is not None else 1 if directed else 0
+
+    # set node number and library graph
+    nodes = population.size if population is not None else nodes
+
+    graph_psf = nngt.Graph(
+        name=name, nodes=nodes, directed=directed, weighted=weighted,
+        **kwargs)
+
+    _set_options(graph_psf, population, shape, positions)
+
+    # add edges
+    if nodes > 1:
+        ids = range(nodes)
+        edges = _price_scale_free(ids, m, c, gamma, reciprocity, directed,
+                                     multigraph)
+
+        graph_psf.new_edges(edges, check_duplicates=False,
+                            check_self_loops=False, check_existing=False)
+
+    graph_psf._graph_type = "price_scale_free"
+
+    return graph_psf
 
 
 # -------------- #
@@ -815,7 +858,7 @@ def newman_watts(coord_nb, proba_shortcut=None, reciprocity_circular=1.,
 
     Note
     ----
-	`nodes` is required unless `from_graph` or `population` is provided.
+    `nodes` is required unless `from_graph` or `population` is provided.
     """
     if multigraph:
         raise ValueError("`multigraph` is not supported for Watts-Strogatz.")
@@ -911,7 +954,7 @@ def watts_strogatz(coord_nb, proba_shortcut=None, reciprocity_circular=1.,
 
     Note
     ----
-	`nodes` is required unless `from_graph` or `population` is provided.
+    `nodes` is required unless `from_graph` or `population` is provided.
     """
     if multigraph:
         raise ValueError("`multigraph` is not supported for Newman-Watts.")

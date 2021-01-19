@@ -98,7 +98,7 @@ class Graph(nngt.core.GraphObject):
 
     @classmethod
     def from_matrix(cls, matrix, weighted=True, directed=True, population=None,
-                    shape=None, positions=None, name=None):
+                    shape=None, positions=None, name=None, **kwargs):
         '''
         Creates a :class:`~nngt.Graph` from a :mod:`scipy.sparse` matrix or
         a dense matrix.
@@ -137,6 +137,8 @@ class Graph(nngt.core.GraphObject):
                     raise InvalidArgument('Incompatible `directed=False` '
                                           'option provided for non symmetric '
                                           'matrix.')
+
+                matrix = ssp.tril(matrix, format=matrix.format)
         else:
             graph_name = graph_name.replace('Y', 'Dense')
             if not directed:
@@ -144,6 +146,7 @@ class Graph(nngt.core.GraphObject):
                     raise InvalidArgument('Incompatible `directed=False` '
                                           'option provided for non symmetric '
                                           'matrix.')
+                matrix = np.tril(matrix)
 
         edges = np.array(matrix.nonzero()).T
 
@@ -154,12 +157,12 @@ class Graph(nngt.core.GraphObject):
             graph_name = name
 
         graph = cls(nodes, name=graph_name, weighted=weighted,
-                    directed=directed)
+                    directed=directed, **kwargs)
 
         if population is not None:
             cls.make_network(graph, population)
 
-        if shape is not None:
+        if shape is not None or positions is not None:
             cls.make_spatial(graph, shape, positions)
 
         weights = None
@@ -181,7 +184,7 @@ class Graph(nngt.core.GraphObject):
     @staticmethod
     def from_file(filename, fmt="auto", separator=" ", secondary=";",
                   attributes=None, attributes_types=None, notifier="@",
-                  ignore="#", from_string=False, name="LoadedGraph",
+                  ignore="#", from_string=False, name=None,
                   directed=True, cleanup=False):
         '''
         Import a saved graph from a file.
@@ -253,6 +256,8 @@ class Graph(nngt.core.GraphObject):
             # only partial support for these formats, relying on backend
             libgraph = _library_load(filename, fmt)
 
+            name = "LoadedGraph" if name is None else name
+
             graph = Graph.from_library(libgraph, name=name, directed=directed)
 
             return graph
@@ -264,7 +269,9 @@ class Graph(nngt.core.GraphObject):
             cleanup=cleanup)
 
         # create the graph
-        graph = Graph(nodes=info["size"], name=info.get("name", name),
+        name = info.get("name", "LoadedGraph") if name is None else name
+
+        graph = Graph(nodes=info["size"], name=name,
                       directed=info.get("directed", directed))
 
         # make the nodes attributes
@@ -495,6 +502,7 @@ class Graph(nngt.core.GraphObject):
         t = self.type
         n = self.node_nb()
         e = self.edge_nb()
+
         return "<{directed}/{weighted} {obj} object of type '{net_type}' " \
                "with {nodes} nodes and {edges} edges at 0x{obj_id}>".format(
                     directed=d, weighted=w, obj=type(self).__name__,

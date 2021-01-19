@@ -32,7 +32,8 @@ from nngt.lib import InvalidArgument, BWEIGHT, nonstring_container, is_integer
 from nngt.lib.connect_tools import (_cleanup_edges, _set_dist_new_edges,
                                     _set_default_edge_attributes)
 from nngt.lib.converters import _to_np_array
-from nngt.lib.graph_helpers import _get_dtype, _get_gt_weights
+from nngt.lib.graph_helpers import (_get_dtype, _get_gt_weights,
+                                    _post_del_update)
 from nngt.lib.logger import _log_message
 from .graph_interface import GraphInterface, BaseProperty
 
@@ -103,7 +104,9 @@ class _GtNProperty(BaseProperty):
 
         if len(values) != g.num_vertices():
             raise ValueError("A list or a np.array with one entry per "
-                             "node in the graph is required")
+                             "node in the graph is required, got "
+                             "{} values vs {} nodes for '{}'.".format(
+                                len(values), g.num_vertices(), name))
 
         # store name and value type in the dict
         super(_GtNProperty, self).__setitem__(name, value_type)
@@ -367,7 +370,19 @@ class _GtGraph(GraphInterface):
         g = copy_graph.graph if copy_graph is not None else None
 
         if g is not None:
+            from graph_tool import Graph as GtGraph
             from graph_tool.stats import remove_parallel_edges
+
+            num_edges = copy_graph.edge_nb()
+
+            if copy_graph._edges_deleted:
+                # set edge filter for non-deleted edges
+                eprop = g.new_edge_property(
+                    "bool", vals=np.ones(num_edges, dtype=bool))
+
+                g.set_edge_filter(eprop)
+                g = GtGraph(g, directed=g.is_directed(), prune=True)
+
             if not directed and g.is_directed():
                 g = g.copy()
                 g.set_directed(False)
@@ -377,8 +392,6 @@ class _GtGraph(GraphInterface):
                 g.set_directed(True)
 
             self._from_library_graph(g, copy=True)
-
-            num_edges = self.edge_nb()
 
             # make edge id property map
             if "eid" in g.edge_properties:
@@ -589,6 +602,9 @@ class _GtGraph(GraphInterface):
         if old_enum != self.edge_nb():
             self._eattr.edges_deleted()
             self._edges_deleted = True
+
+        # check spatial and structure properties
+        _post_del_update(self, nodes)
 
     def new_edge(self, source, target, attributes=None, ignore=False,
                  self_loop=False):
@@ -876,15 +892,16 @@ class _GtGraph(GraphInterface):
 
         if edges:
             for key, val in graph.edge_properties.items():
-                if val.value_type() == 'string':
-                    super(type(self._eattr), self._eattr).__setitem__(
-                        key, 'string')
-                elif val.value_type().startswith('vector'):
-                    super(type(self._eattr), self._eattr).__setitem__(
-                        key, 'object')
-                else:
-                    super(type(self._eattr), self._eattr).__setitem__(
-                        key, _get_dtype(val.a[0]))
+                if key != 'eid':
+                    if val.value_type() == 'string':
+                        super(type(self._eattr), self._eattr).__setitem__(
+                            key, 'string')
+                    elif val.value_type().startswith('vector'):
+                        super(type(self._eattr), self._eattr).__setitem__(
+                            key, 'object')
+                    else:
+                        super(type(self._eattr), self._eattr).__setitem__(
+                            key, _get_dtype(val.a[0]))
 
         # make edge ids
         eids = self._graph.new_edge_property(

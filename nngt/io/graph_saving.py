@@ -158,10 +158,6 @@ def _as_string(graph, fmt="neighbour", separator=" ", secondary=";",
     '''
     Full string representation of the graph.
 
-    .. versionchanged:: 0.7
-        Added support to write position and Shape when saving
-        :class:`~nngt.SpatialGraph`. Note that saving Shape requires shapely.
-
     Parameters
     ----------
     graph : :class:`~nngt.Graph` or subclass
@@ -239,15 +235,21 @@ def _as_string(graph, fmt="neighbour", separator=" ", secondary=";",
 
         tmp = np.array2string(
             graph.get_node_attributes(name=nattr), max_line_width=np.NaN,
-            separator=separator)[2:-2].replace("'" + separator + "'",
+            separator=separator)[1:-1].replace("'" + separator + "'",
                                                '"' + separator + '"')
 
         # replace possible variants
         tmp = tmp.replace("'" + separator + '"', '"' + separator + '"')
         tmp = tmp.replace('"' + separator + "'", '"' + separator + '"')
 
+        if tmp.startswith("'"):
+            tmp = '"' + tmp[1:]
+
+        if tmp.endswith("'"):
+             tmp = tmp[:-1] + '"'
+
         # make and store final string
-        additional_notif[key] = '"' + tmp + '"'
+        additional_notif[key] = tmp
 
     # save positions for SpatialGraph (and shape if Shapely is available)
     if graph.is_spatial():

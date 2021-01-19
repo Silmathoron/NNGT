@@ -265,10 +265,23 @@ def test_total_undirected_connectivities():
 
     # erdos-renyi
     density = 0.1
-    g = ng.erdos_renyi(density=density, nodes=num_nodes, directed=False)
+
+    lower, upper = 0.3, 5.4
+
+    weights = {"distribution": "uniform", "lower": lower, "upper": upper}
+
+    g = ng.erdos_renyi(density=density, nodes=num_nodes, directed=False,
+                       weights=weights)
 
     assert g.edge_nb() / (num_nodes*num_nodes) == density
 
+    # check weights
+
+    ww = g.get_weights()
+
+    assert np.all((lower <= ww) * (ww <= upper))
+
+    # check other graph types
     for directed in (True, False):
         # fixed-degree
         deg = 50
@@ -379,6 +392,84 @@ def test_distances():
     assert np.array_equal(dist, expected)
 
 
+@pytest.mark.mpi_skip
+def test_price():
+    ''' Test Price network '''
+    # directed
+    m = 5
+    g = ng.price_scale_free(m, nodes=100)
+
+    in_degrees  = g.get_degrees("in")
+    out_degrees = g.get_degrees("out")
+
+    assert set(out_degrees) == {i for i in range(m + 1)}
+    assert in_degrees.min() == 0
+
+    # undirected
+    g = ng.price_scale_free(m, nodes=100, undirected=False)
+
+    degrees = g.get_degrees()
+
+    assert np.all(degrees >= m)
+
+    # reciprocity
+    g = ng.price_scale_free(m, nodes=100, reciprocity=1)
+
+    assert np.all(degrees >= m)
+    assert na.reciprocity(g) == 1
+
+    r = 0.3
+
+    g = ng.price_scale_free(m, nodes=100, reciprocity=r)
+
+    E  = g.edge_nb()
+    Er = 2 * r * E  / (1 + r)
+
+    rmin = (Er - 3*np.sqrt(Er)) / E
+    rmax = (Er + 3*np.sqrt(Er)) / E
+
+    assert rmin < na.reciprocity(g) < rmax
+
+
+@pytest.mark.mpi_skip
+def test_connect_switch_distance_rule_max_proba():
+    num_omp = nngt.get_config("omp")
+    mthread = nngt.get_config("multithreading")
+
+    # switch multithreading to False
+    nngt.set_config("multithreading", False)
+
+    pop = nngt.NeuralPop.exc_and_inhib(1000)
+
+    radius = 100.
+
+    shape = nngt.geometry.Shape.disk(radius)
+
+    net = nngt.SpatialNetwork(population=pop, shape=shape)
+
+    max_proba = 0.1
+
+    avg, std = 10., 1.5
+
+    weights = {"distribution": "gaussian", "avg": avg, "std": std}
+
+    ng.connect_nodes(net, pop.inhibitory, pop.excitatory, "distance_rule",
+                     scale=5*radius, max_proba=max_proba, weights=weights)
+
+    assert net.edge_nb() <= len(pop.inhibitory)*len(pop.excitatory)*max_proba
+
+    # check weights
+    ww = net.get_weights()
+
+    assert avg - 0.5*std < ww.mean() < avg + 0.5*std
+    assert 0.75*std < ww.std() < 1.25*std
+
+    # restore mt parameters
+    nngt.set_config("mpi", False)
+    nngt.set_config("omp", num_omp)
+    nngt.set_config("multithreading", mthread)
+
+
 if __name__ == "__main__":
     if not nngt.get_config("mpi"):
         test_newman_watts()
@@ -387,6 +478,8 @@ if __name__ == "__main__":
         test_watts_strogatz()
         test_all_to_all()
         test_distances()
+        test_price()
+        test_connect_switch_distance_rule_max_proba()
 
     if nngt.get_config("mpi"):
         test_mpi_from_degree_list()

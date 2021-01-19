@@ -142,8 +142,14 @@ def set_config(config, value=None, silent=False):
 
     for key, val in new_config.items():
         # support for previous "palette" keyword
-        if key not in nngt._config and key != "palette":
-            raise KeyError("Unknown configuration property: {}".format(key))
+        if key not in nngt._config:
+            if key == "palette":
+                _log_message(logger, "WARNING",
+                             "`palette` argument is deprecated and will be "
+                             "removed in version 3.")
+            else:
+                raise KeyError(
+                    "Unknown configuration property: {}".format(key))
 
         if key == "log_level":
             new_config[key] = _convert(val)
@@ -292,7 +298,8 @@ def _set_gt_config(old_gl, new_config):
 
 
 def _pre_update_parallelism(new_config, old_mt, old_omp, old_mpi):
-    mt      = "multithreading"
+    mt = "multithreading"
+
     if "omp" in new_config:
         if new_config["omp"] > 1:
             if mt in new_config and not new_config[mt]:
@@ -305,6 +312,7 @@ def _pre_update_parallelism(new_config, old_mt, old_omp, old_mpi):
                              "'multithreading' was set to False but new "
                              "'omp' is greater than one. Updating "
                              "'multithreading' to True.")
+
     if new_config.get('mpi', False) and new_config.get(mt, False):
         raise InvalidArgument('Cannot set both "mpi" and "multithreading" to '
                               'True simultaneously, choose one or the other.')
@@ -317,6 +325,7 @@ def _pre_update_parallelism(new_config, old_mt, old_omp, old_mpi):
                          '"mpi" set to True but previous configuration was '
                          'using OpenMP; setting "multithreading" to False '
                          'to switch to mpi algorithms.')
+
     with_mt  = new_config.get(mt, old_mt)
     with_mpi = new_config.get('mpi', old_mpi)
 
@@ -355,10 +364,9 @@ def _post_update_parallelism(new_config, old_gl, old_msd, old_mt, old_mpi):
     new_multithreading = new_config.get("multithreading", old_mt)
 
     if new_multithreading != old_mt:
-        # connectors.py and rewiring.py use directly
-        # nngt.generation.graph_connectivity so they always access the reloaded
-        # version and we don't need to reload them
         reload(sys.modules["nngt"].generation.graph_connectivity)
+        reload(sys.modules["nngt"].generation.connectors)
+        reload(sys.modules["nngt"].generation.rewiring)
 
     # if multithreading loading failed, set omp back to 1
     if not nngt._config['multithreading']:
@@ -389,10 +397,9 @@ def _post_update_parallelism(new_config, old_gl, old_msd, old_mt, old_mpi):
 
     # reload for mpi
     if new_config.get('mpi', old_mpi) != old_mpi:
-        # connectors.py and rewiring.py use directly
-        # nngt.generation.graph_connectivity so they always access the reloaded
-        # version and we don't need to reload them
         reload(sys.modules["nngt"].generation.graph_connectivity)
+        reload(sys.modules["nngt"].generation.connectors)
+        reload(sys.modules["nngt"].generation.rewiring)
 
     # set graph-tool config
     _set_gt_config(old_gl, new_config)

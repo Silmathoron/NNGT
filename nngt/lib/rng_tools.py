@@ -24,7 +24,9 @@ import numpy as np
 import scipy.sparse as ssp
 
 import nngt
-from nngt.lib import InvalidArgument
+
+from .errors import InvalidArgument
+from .test_functions import nonstring_container
 from .test_functions import mpi_random
 
 
@@ -88,13 +90,33 @@ def seed(msd=None, seeds=None):
 # ----------------------------- #
 
 def _generate_random(number, instructions):
-    name = instructions[0]
-    if name in di_dfunc:
-        return di_dfunc[name](None, None, number, *instructions[1:])
-    else:
+    name = "not defined"
+
+    if isinstance(instructions, dict):
+        name = instructions["distribution"]
+
+        instructions = {
+            k: v for k, v in instructions.items() if k != "distribution"
+        }
+
+        if name in di_dfunc:
+            return di_dfunc[name](None, None, number, **instructions)
+
         raise NotImplementedError(
             "Unknown distribution: '{}'. Supported distributions " \
             "are {}".format(name, ", ".join(di_dfunc.keys())))
+    elif nonstring_container(instructions):
+        name = instructions[0]
+
+        if name in di_dfunc:
+            return di_dfunc[name](None, None, number, *instructions[1:])
+
+        raise NotImplementedError(
+            "Unknown distribution: '{}'. Supported distributions " \
+            "are {}".format(name, ", ".join(di_dfunc.keys())))
+
+    raise NotImplementedError(
+        "Unknown instructions: '{}'".format(instructions))
 
 
 def _eprop_distribution(graph, distrib_type, matrix=False, elist=None,
