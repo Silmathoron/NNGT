@@ -293,7 +293,10 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
 
     spatial *= (network.is_spatial() or pos is not None)
 
-    if layout == "circular":
+    if nonstring_container(layout):
+        assert np.shape(layout) == (n, 2), "One position per node is required."
+        pos = np.asarray(layout)
+    elif layout == "circular":
         pos = _circular_layout(network, nsize)
     elif pos is None and spatial:
         if show_environment:
@@ -302,10 +305,9 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
         nodes = None if restrict_nodes is None else list(restrict_nodes)
 
         pos = network.get_positions(nodes=nodes)
-    elif nonstring_container(layout):
-        assert np.shape(layout) == (n, 2), "One position per node is required."
-        pos = np.asarray(layout)
     else:
+        pos = np.full((n, 2), np.NaN)
+
         pos[:, 0] = size[0]*(np.random.uniform(size=n)-0.5)
         pos[:, 1] = size[1]*(np.random.uniform(size=n)-0.5)
 

@@ -1,6 +1,7 @@
 import os
 
 import geopandas as gpd
+from shapely.geometry import Point
 
 
 folder = os.path.abspath(os.path.dirname(__file__)) + "/world_maps/"
@@ -12,7 +13,7 @@ folder = os.path.abspath(os.path.dirname(__file__)) + "/world_maps/"
 
 world_110 = gpd.read_file(folder + "ne_110m_admin_0_countries.shp")
 world_50  = gpd.read_file(folder + "ne_50m_admin_0_countries.shp")
-world_10  = gpd.read_file(folder + "ne_10m_admin_0_countries.shp")
+world_10  = gpd.read_file(folder + "ne_10m_admin_0_map_units.shp")
 
 maps = {
     "110m": world_110,
@@ -121,5 +122,6 @@ convertors.update(
 
 country_points = gpd.GeoDataFrame({
     'country': world.NAME_LONG,
+    'geocode': world.SU_A3,
     'geometry': world.geometry.representative_point()
 })

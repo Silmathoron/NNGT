@@ -7,7 +7,7 @@ from nngt.plot import draw_network
 from .countries import maps, countries, convertors
 
 
-def draw_map(graph, node_names, geodata=None, geodata_names="NAME_LONG",
+def draw_map(graph, node_names, geodata=None, geodata_names=None,
              points=None, show_points=False, hue=None, proj=None,
              all_geodata=True, axis=None, show=False, **kwargs):
     '''
@@ -20,14 +20,15 @@ def draw_map(graph, node_names, geodata=None, geodata_names="NAME_LONG",
     node_names : str
         Name of the node attribute containing the nodes names that will be
         used to place them on the map. By default (if no `geodata` is
-        provided), these must be country names.
+        provided), these must be country names or (better) A3 codes.
     geodata : :class:`geopandas.GeoDataFrame`, optional (default: world map)
         Optional dataframe containing the geospatial information.
         Predefined geodatas are "110m", "50m", and "10m" for world maps with
         respectively 110, 50, and 10 meter resolutions, or "adaptive" (default)
         for a world map with adaptive resolution depending on the country size.
-    geodata_names : str, optional (default: "NAME_LONG")
-        Column in `geodata` corresponding to the `node_names`.
+    geodata_names : str, optional (default: "NAME_LONG" or "SU_A3")
+        Column in `geodata` corresponding to the `node_names` (respectively
+        for full country names or A3 codes).
     points : str, optional (default: no points)
         Whether a precise point should be associated to each node.
         Either an entry in `geodata` or "centroid", or "representative"
@@ -57,21 +58,39 @@ def draw_map(graph, node_names, geodata=None, geodata_names="NAME_LONG",
     '''
     names = graph.node_attributes[node_names]
 
+    # check whether the names are full names or A3 codes
+    is_a3_codes = True
+
+    for n in names:
+        if len(n) != 3:
+            is_a3_codes = False
+            break
+
+    if geodata_names is None:
+        if is_a3_codes:
+            geodata_names = "SU_A3"
+        else:
+            geodata_names = "NAME_LONG"
+
+    # set map
     world_map = True
 
     if geodata is None:
         geodata = maps["adaptive"]
 
         # update names
-        names = [convertors.get(name, name) for name in names]
+        if not is_a3_codes:
+            names = [convertors.get(name, name) for name in names]
     elif isinstance(geodata, str):
         geodata = maps[geodata]
 
         # update names
-        names = [convertors.get(name, name) for name in names]
+        if not is_a3_codes:
+            names = [convertors.get(name, name) for name in names]
     else:
         world_map = False
 
+    # projection
     if proj is None:
         proj = ccrs.PlateCarree()
     else:
@@ -100,6 +119,7 @@ def draw_map(graph, node_names, geodata=None, geodata_names="NAME_LONG",
 
         geodata.iloc[elements].plot(column=hue, ax=axis, zorder=1)
 
+    # get positions
     pos = []
 
     if points is not None:
@@ -130,8 +150,13 @@ def draw_map(graph, node_names, geodata=None, geodata_names="NAME_LONG",
         if k in kwargs:
             del kwargs[k]
 
-    draw_network(graph, positions=pos, axis=axis, show_environment=False,
+    # make plot
+    draw_network(graph, layout=pos, axis=axis, show_environment=False,
                  fast=True, tight=False, proj=proj, spatial=False, show=show,
                  **kwargs)
+
+    # restore full map
+    axis.set_xlim(-180, 180)
+    axis.set_ylim(-90, 90)
 
     return axis

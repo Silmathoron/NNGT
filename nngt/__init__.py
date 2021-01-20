@@ -279,6 +279,7 @@ __all__ = [
     "generate",
     "generation",
     "geometry",
+    "geography",
     "get_config",
     "Graph",
     "GroupProperty",
