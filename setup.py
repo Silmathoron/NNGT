@@ -165,8 +165,8 @@ setup_params = dict(
         'matplotlib': 'matplotlib',
         'nx': ['networkx>=2.4'],
         'ig': ['python-igraph'],
-        'geometry': ['shapely', 'dxfgrabber', 'svg.path'],
-        'geography': ['geopandas', 'descartes', 'cartopy'],
+        'geometry': ['matplotlib', 'shapely', 'dxfgrabber', 'svg.path'],
+        'geography': ['matplotlib', 'geopandas', 'descartes', 'cartopy'],
         'full': ['cython', 'networkx>=2.4', 'shapely', 'dxfgrabber',
                  'svg.path', 'matplotlib', 'geopandas', 'descartes', 'cartopy']
     },

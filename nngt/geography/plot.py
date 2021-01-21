@@ -142,6 +142,9 @@ def draw_map(graph, node_names, geodata=None, geodata_names=None,
 
     pos = np.array(pos)
 
+    if "restrict_nodes" in kwargs:
+        pos = pos[kwargs["restrict_nodes"]]
+
     rm_kw = [
         "show_environment", "positions", "axis", "tight", "fast", "spatial"
     ]
@@ -152,11 +155,14 @@ def draw_map(graph, node_names, geodata=None, geodata_names=None,
 
     # make plot
     draw_network(graph, layout=pos, axis=axis, show_environment=False,
-                 fast=True, tight=False, proj=proj, spatial=False, show=show,
+                 fast=True, tight=False, proj=proj, spatial=False, show=False,
                  **kwargs)
 
     # restore full map
-    axis.set_xlim(-180, 180)
-    axis.set_ylim(-90, 90)
+    if all_geodata:
+        axis.set_global()
+
+    if show:
+        plt.show()
 
     return axis
