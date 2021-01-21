@@ -1289,6 +1289,18 @@ def library_draw(network, nsize="total-degree", ncolor="group", nshape="o",
         for k, v in convert_shape.items():
             shape_dict[k] = v
 
+        if nonstring_container(nsize):
+            nsize = list(nsize)
+
+        if nonstring_container(node_color):
+            node_color = list(node_color)
+
+        if nonstring_container(esize):
+            esize = list(esize)
+
+        if nonstring_container(ecolor):
+            ecolor = list(ecolor)
+
         visual_style = {
             "vertex_size": nsize,
             "vertex_color": node_color,
