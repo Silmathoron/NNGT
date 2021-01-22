@@ -3,7 +3,7 @@ import numpy as np
 
 import cartopy.crs as ccrs
 
-from nngt.plot import draw_network
+from ..plot import draw_network
 from .countries import maps, countries, convertors
 
 

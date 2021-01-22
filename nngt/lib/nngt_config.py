@@ -190,19 +190,15 @@ def set_config(config, value=None, silent=False):
         if nngt._config["db_to_file"]:
             _log_message(logger, "WARNING",
                         "This functionality is not available")
+
     # update nest
     if imputil.find_spec("nest") is not None:
         _lazy_load("nngt.simulation")
         nngt._config["with_nest"] = True
     else:
         nngt._config["with_nest"] = False
-    # log changes
-    _configure_logger(nngt._logger)
-    glib = (nngt._config["library"] if nngt._config["library"] is not None
-            else nngt)
-    num_mpi = num_mpi_processes()
-    s_mpi = False if not nngt._config["mpi"] else "True ({} process{})".format(
-                num_mpi, "es" if num_mpi > 1 else "")
+
+    # check geometry
     try:
         import svg.path
         has_svg = True
@@ -218,7 +214,27 @@ def set_config(config, value=None, silent=False):
         has_shapely = shapely.__version__
     except:
         has_shapely = False
-    conf_info = config_info.format(
+
+    # check geography
+    has_geography = False
+
+    if imputil.find_spec("geopandas") is not None and has_shapely:
+        _lazy_load("nngt.geography")
+        has_geography = True
+
+    # log changes
+    _configure_logger(nngt._logger)
+
+    glib = (nngt._config["library"] if nngt._config["library"] is not None
+            else nngt)
+
+    num_mpi = num_mpi_processes()
+
+    s_mpi = False if not nngt._config["mpi"] \
+            else "True ({} process{})".format(
+                num_mpi, "es" if num_mpi > 1 else "")
+
+    conf_info = _config_info.format(
         gl      = nngt._config["backend"] + " " + glib.__version__[:5],
         thread  = nngt._config["multithreading"],
         plot    = nngt._config["with_plot"],
@@ -230,7 +246,9 @@ def set_config(config, value=None, silent=False):
         shapely = has_shapely,
         svg     = has_svg,
         dxf     = has_dxf,
+        geotool = has_geography,
     )
+
     if not silent and old_config != nngt._config:
         _log_conf_changed(conf_info)
 
@@ -421,15 +439,17 @@ def _lazy_load(fullname):
         spec   = imputil.find_spec(fullname)
         module = imputil.module_from_spec(spec)
         loader = imputil.LazyLoader(spec.loader)
+
         # setup module and insert into sys.modules
         loader.exec_module(module)
+
         return module
 
 
-config_info = '''
-# -------------- #
-# Config changed #
-# -------------- #
+_config_info = '''
+# ----------- #
+# NNGT config #
+# ----------- #
 Graph library:  {gl}
 Multithreading: {thread} ({omp} thread{s})
 MPI:            {mpi}
@@ -439,4 +459,5 @@ Shapely:        {shapely}
 SVG support:    {svg}
 DXF support:    {dxf}
 Database:       {db}
+Geo support:    {geotool}
 '''

@@ -14,11 +14,13 @@ folder = os.path.abspath(os.path.dirname(__file__)) + "/world_maps/"
 world_110 = gpd.read_file(folder + "ne_110m_admin_0_countries.shp")
 world_50  = gpd.read_file(folder + "ne_50m_admin_0_countries.shp")
 world_10  = gpd.read_file(folder + "ne_10m_admin_0_map_units.shp")
+cities    = gpd.read_file(folder + "ne_10m_populated_places_simple.shp")
 
 maps = {
     "110m": world_110,
     "50m": world_50,
-    "10m": world_10
+    "10m": world_10,
+    "cities": cities,
 }
 
 
