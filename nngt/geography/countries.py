@@ -1,5 +1,7 @@
 import os
 
+import numpy as np
+
 import geopandas as gpd
 from shapely.geometry import Point
 
@@ -28,37 +30,132 @@ maps = {
 # Store countries and their world/positions #
 # ----------------------------------------- #
 
-countries_adaptive = {}
-countries_110 = {}
-countries_50 = {}
-countries_10 = {}
+country_codes_adaptive = {}
+country_codes_110 = {}
+country_codes_50 = {}
+country_codes_10 = {}
 
+country_names_adaptive = {}
+country_names_110 = {}
+country_names_50 = {}
+country_names_10 = {}
+
+ctn_adaptive = {}
+ctn_110 = {}
+ctn_50 = {}
+ctn_10 = {}
+
+countries = {"Country", "Sovereign country", 'Geo unit'}
+
+codes = ("GU_A3", "SOV_A3", "ADM0_A3")
 
 for i, v in world_110.iterrows():
-    countries_110[v.NAME_LONG] = i
-    countries_adaptive[v.NAME_LONG] = i
+    name = v.NAME_LONG
+    code = v.SU_A3
+
+    cvalues = [v[c] for c in codes]
+
+    country_names_110[name] = i
+    country_names_adaptive[name] = i
+
+    country_codes_110[code] = i
+    country_codes_adaptive[code] = i
+
+    ctn_110[code] = name
+    ctn_adaptive[code] = name
+
+    for cval in cvalues:
+        if v.TYPE in countries and cval not in country_codes_adaptive:
+            country_codes_110[cval] = i
+            country_codes_adaptive[cval] = i
+            ctn_110[cval] = name
+            ctn_adaptive[cval] = name
 
 
-new_countries = []
+new_countries = set()
+size_adaptive = len(world_110)
 
 for i, v in world_50.iterrows():
-    countries_50[v.NAME_LONG] = i
+    name = v.NAME_LONG
+    code = v.SU_A3
 
-    if v.NAME_LONG not in countries_adaptive:
-        countries_adaptive[v.NAME_LONG] = len(countries_adaptive)
-        new_countries.append(i)
+    cvalues = [v[c] for c in codes]
+
+    country_names_50[name] = i
+    country_codes_50[code] = i
+
+    ctn_50[code] = name
+
+    if name not in country_names_adaptive:
+        country_names_adaptive[name] = len(new_countries) + size_adaptive
+        country_codes_adaptive[code] = len(new_countries) + size_adaptive
+        ctn_adaptive[code] = name
+
+    for cval in cvalues:
+        if v.TYPE in countries and cval not in country_codes_50:
+            country_codes_50[cval] = i
+            ctn_50[cval] = name
+
+            if cval not in country_codes_adaptive:
+                country_codes_adaptive[cval] = \
+                    len(new_countries) + size_adaptive
+                ctn_adaptive[cval] = name
+
+            new_countries.add(i)
 
 
-world = world_110.append(world_50.iloc[new_countries], ignore_index=True)
+world = world_110.append(world_50.iloc[list(new_countries)], ignore_index=True)
 
 
 new_countries = []
+size_adaptive = len(world)
 
 for i, v in world_10.iterrows():
-    countries_10[v.NAME_LONG] = i
+    name = v.NAME_LONG
+    code = v.SU_A3
 
-    if v.NAME_LONG not in countries_adaptive:
-        countries_adaptive[v.NAME_LONG] = len(countries_adaptive)
+    cvalues = [v[c] for c in codes]
+
+    country_names_10[name] = i
+    country_codes_10[code] = i
+
+    ctn_10[code] = name
+
+    for cval in cvalues:
+        if v.TYPE in countries and cval not in country_codes_10:
+            country_codes_10[cval] = i
+            ctn_10[cval] = name
+
+    if name not in country_names_adaptive:
+        sovc = v.SOV_A3
+
+        # check if it's a subunit, if so, add only if it does not overlap
+        # with sovereign territory (special case for Antigua and Barbuda)
+        if v.LEVEL == 3 and sovc != "ATG":
+            geom = v.geometry
+
+            # get soverign territory
+            idx = country_codes_adaptive[sovc]
+
+            sov_geom = world.iloc[idx].geometry
+
+            overlap = geom.intersection(sov_geom).area > 0.1*geom.area
+
+            if overlap:
+                continue
+
+        country_names_adaptive[name] = len(new_countries) + size_adaptive
+        country_codes_adaptive[code] = len(new_countries) + size_adaptive
+
+        ctn_adaptive[code] = name
+
+        if v.TYPE in countries:
+            for cval in cvalues:
+                if cval not in country_codes_adaptive:
+                    country_codes_adaptive[cval] = \
+                        len(new_countries) + size_adaptive
+                    ctn_adaptive[cval] = name
+
         new_countries.append(i)
 
 
@@ -66,11 +163,25 @@ world = world.append(world_10.iloc[new_countries], ignore_index=True)
 
 maps["adaptive"] = world
 
-countries = {
-    "110m": countries_110,
-    "50m": countries_50,
-    "10m": countries_10,
-    "adaptive": countries_adaptive
+country_names = {
+    "110m": country_names_110,
+    "50m": country_names_50,
+    "10m": country_names_10,
+    "adaptive": country_names_adaptive
+}
+
+country_codes = {
+    "110m": country_codes_110,
+    "50m": country_codes_50,
+    "10m": country_codes_10,
+    "adaptive": country_codes_adaptive
+}
+
+codes_to_names = {
+    "110m": ctn_110,
+    "50m": ctn_50,
+    "10m": ctn_10,
+    "adaptive": ctn_adaptive
 }
 
 
@@ -122,8 +233,40 @@ convertors.update(
 # Representative points for countries #
 # ----------------------------------- #
 
+points = []
+
+for _, v in world.iterrows():
+    if v.TYPE in countries:
+        # check capital
+        idx = np.where((cities.sov_a3 == v.SOV_A3)*cities.adm0cap)[0]
+
+        if len(idx) == 1:
+            points.append(cities.iloc[idx[0]].geometry)
+            continue
+        elif len(idx) > 1:
+            pop = cities.iloc[idx].pop_max
+            idx = np.argmax(pop)
+            points.append(cities.iloc[idx].geometry)
+            continue
+        else:
+            idx = np.where((cities.sov_a3 == v.SU_A3)*cities.adm0cap)[0]
+
+            if len(idx) == 1:
+                points.append(cities.iloc[idx[0]].geometry)
+                continue
+            elif len(idx) > 1:
+                pop = cities.iloc[idx].pop_max
+                idx = idx[np.argmax(pop)]
+                points.append(cities.iloc[idx].geometry)
+                continue
+
+    points.append(v.geometry.representative_point())
+        
+
 country_points = gpd.GeoDataFrame({
     'country': world.NAME_LONG,
     'geocode': world.SU_A3,
-    'geometry': world.geometry.representative_point()
+    'geometry': points
 })
+
+country_points.set_crs(epsg=world.crs.to_epsg(), inplace=True)

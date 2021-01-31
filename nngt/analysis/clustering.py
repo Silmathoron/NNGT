@@ -226,6 +226,7 @@ def local_closure(g, directed=True, weights=None, method=None,
         _, mat = _get_matrices(g, directed, weights, weighted, combine_weights)
     else:
         mat = g.adjacency_matrix(weights=weights)
+        mat /= mat.max()
         mat.setdiag(0)
 
     mat2, mat3 = None, None

@@ -381,12 +381,11 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
                     axis.plot(
                         pos[i, 0], pos[i, 1], color=c[i], ms=0.5*nsize[i],
                         marker=nshape[i], ls="", zorder=2,
-                        mec=nborder_color[i], mew=nborder_width, alpha=nalpha,
-                        **kw)
+                        mec=nborder_color[i], mew=nborder_width, alpha=nalpha)
         else:
             axis.scatter(pos[:, 0], pos[:, 1], color=c, s=0.5*np.array(nsize),
                          marker=nshape, zorder=2, edgecolor=nborder_color,
-                         linewidths=nborder_width, alpha=nalpha, **kw)
+                         linewidths=nborder_width, alpha=nalpha)
     else:
         nodes = []
 
@@ -423,10 +422,9 @@ def draw_network(network, nsize="total-degree", ncolor="group", nshape="o",
     # use quiver to draw the edges
     if e and decimate_connections != -1:
         avg_size = np.average(nsize)
-        # ~ arrowstyle = ArrowStyle.Simple(head_length=0.15*avg_size,
-                                      # ~ head_width=0.1*avg_size,
-                                      # ~ tail_width=0.05*avg_size)
+
         arrows = []
+
         if group_based:
             for src_name, src_group in network.population.items():
                 for tgt_name, tgt_group in network.population.items():
@@ -1917,32 +1915,31 @@ def _split_edges_sizes(edges, esize, decimate_connections, ecolor=None,
     strght_edges, self_loops = None, None
     strght_sizes, loop_sizes = None, None
 
-    if nonstring_container(esize):
-        keep  = (esize > 0)
-        loops = (edges[:, 0] == edges[:, 1])
+    keep  = (esize > 0) if nonstring_container(esize) else True
+    loops = (edges[:, 0] == edges[:, 1])
 
-        strght = keep*(~loops)
+    strght = keep*(~loops)
 
-        strght_edges = edges[strght]
+    strght_edges = edges[strght]
 
-        self_loops = set(edges[loops, 0])
+    self_loops = set(edges[loops, 0])
 
-        if ecolor is not None:
-            if nonstring_container(ecolor):
-                if decimate_connections < 1:
-                    strght_colors.extend(ecolor[strght])
-                loop_colors.extend(ecolor[loops])
-            else:
-                if decimate_connections < 1:
-                    strght_colors.extend([ecolor]*len(strght_edges))
-                loop_colors.extend([ecolor]*len(self_loops))
-
-        if nonstring_container(esize):
-            strght_sizes = esize[strght]
-            loop_sizes = esize[loops]
+    if ecolor is not None:
+        if nonstring_container(ecolor):
+            if decimate_connections < 1:
+                strght_colors.extend(ecolor[strght])
+            loop_colors.extend(ecolor[loops])
         else:
-            strght_sizes = esize
-            loop_sizes = [esize]*len(self_loops)
+            if decimate_connections < 1:
+                strght_colors.extend([ecolor]*len(strght_edges))
+            loop_colors.extend([ecolor]*len(self_loops))
+
+    if nonstring_container(esize):
+        strght_sizes = esize[strght]
+        loop_sizes = esize[loops]
+    else:
+        strght_sizes = esize
+        loop_sizes = [esize]*len(self_loops)
 
     if decimate_connections > 1:
         strght_edges = \

@@ -4,12 +4,12 @@ import numpy as np
 import cartopy.crs as ccrs
 
 from ..plot import draw_network
-from .countries import maps, countries, convertors
+from .countries import maps, convertors, country_points, country_codes
 
 
 def draw_map(graph, node_names, geodata=None, geodata_names=None,
-             points=None, show_points=False, hue=None, proj=None,
-             all_geodata=True, axis=None, show=False, **kwargs):
+             points=None, show_points=False, linecolor=None, hue=None,
+             proj=None, all_geodata=True, axis=None, show=False, **kwargs):
     '''
     Draw a network on a map.
 
@@ -29,11 +29,13 @@ def draw_map(graph, node_names, geodata=None, geodata_names=None,
     geodata_names : str, optional (default: "NAME_LONG" or "SU_A3")
         Column in `geodata` corresponding to the `node_names` (respectively
         for full country names or A3 codes).
-    points : str, optional (default: no points)
+    points : str, optional (default: capitals and representative points)
         Whether a precise point should be associated to each node.
-        Either an entry in `geodata` or "centroid", or "representative"
+        Either an entry in `geodata`, "centroid", or "representative".
     show_points : bool, optional (default: False)
         Wether the points should be displayed.
+    linecolor : str, char, float or array, optional (default: current palette)
+        Color of the map lines.
     esize : float, str, or array of floats, optional (default: 0.5)
         Width of the edges in percent of canvas length. Available string values
         are "betweenness" and "weight".
@@ -66,6 +68,8 @@ def draw_map(graph, node_names, geodata=None, geodata_names=None,
             is_a3_codes = False
             break
 
+    convert = None
+
     if geodata_names is None:
         if is_a3_codes:
             geodata_names = "SU_A3"
@@ -74,15 +78,12 @@ def draw_map(graph, node_names, geodata=None, geodata_names=None,
 
     # set map
     world_map = True
+    dataframe = None
 
-    if geodata is None:
-        geodata = maps["adaptive"]
+    geodata = "adaptive" if geodata is None else geodata
 
-        # update names
-        if not is_a3_codes:
-            names = [convertors.get(name, name) for name in names]
-    elif isinstance(geodata, str):
-        geodata = maps[geodata]
+    if isinstance(geodata, str):
+        dataframe = maps[geodata]
 
         # update names
         if not is_a3_codes:
@@ -94,8 +95,12 @@ def draw_map(graph, node_names, geodata=None, geodata_names=None,
     if proj is None:
         proj = ccrs.PlateCarree()
     else:
-        crs_proj4 = proj.proj4_init
-        geodata = geodata.to_crs(crs_proj4)
+        try:
+            crs_proj4 = proj.proj4_init
+            dataframe = dataframe.to_crs(crs_proj4)
+        except:
+            # PlateCarree
+            pass
 
     if axis is None:
         fig = plt.figure()
@@ -103,42 +108,62 @@ def draw_map(graph, node_names, geodata=None, geodata_names=None,
 
     # underlying map (optional)
     if all_geodata:
-        geodata.boundary.plot(ax=axis, alpha=0.2, zorder=0)
+        dataframe.boundary.plot(ax=axis, color=linecolor, alpha=0.2, zorder=0)
 
     # get existing elements
-    mapping  = {s[geodata_names]: i for i, s in geodata.iterrows()}
+    mapping = None
+
+    if is_a3_codes and isinstance(geodata, str):
+        cc = country_codes[geodata]
+        mapping = {n: cc[n] for n in names}
+    else:
+        mapping = {s[geodata_names]: i for i, s in dataframe.iterrows()}
+
     elements = [mapping[n] for n in names]
 
     if hue is None:
-        geodata.iloc[elements].boundary.plot(ax=axis, zorder=1)
+        dataframe.iloc[elements].boundary.plot(ax=axis, color=linecolor,
+                                               zorder=1)
     else:
-        if hue not in geodata:
-            geodata[hue] = np.full(len(geodata), np.NaN)
+        if hue not in dataframe:
+            dataframe[hue] = np.full(len(dataframe), np.NaN)
 
-            geodata.loc[elements, hue] = graph.node_attributes[hue]
+            dataframe.loc[elements, hue] = graph.node_attributes[hue]
 
-        geodata.iloc[elements].plot(column=hue, ax=axis, zorder=1)
+        dataframe.iloc[elements].plot(column=hue, ax=axis, zorder=1)
 
     # get positions
     pos = []
 
-    if points is not None:
-        if points in geodata:
-            geodata[points].plot(ax=axis, zorder=2)
-            pos = [(p.xy[0], p.xy[1]) for p in geodata[points]]
-        elif points == "centroid":
-            df = geodata.loc[elements, "geometry"].centroid
+    if points in dataframe:
+        if show_points:
+            dataframe[elements, points].plot(ax=axis, zorder=2)
+        pos = [(p.xy[0][0], p.xy[1][0])
+               for p in dataframe.iloc[elements, points]]
+    elif points == "centroid":
+        df = dataframe.loc[elements, "geometry"].centroid
+        if show_points:
             df.plot(ax=axis, zorder=2)
-            pos = [(p.xy[0], p.xy[1]) for p in df]
-        elif points == "representative":
-            df = geodata.loc[elements, "geometry"].representative_point()
-            df.plot(ax=axis, zorder=2)
-            pos = [(p.xy[0][0], p.xy[1][0]) for p in df]
-
-    # get positions
-    if len(pos) != graph.node_nb():
-        df  = geodata.loc[elements, "geometry"].representative_point()
         pos = [(p.xy[0][0], p.xy[1][0]) for p in df]
+    elif points == "representative":
+        df = dataframe.loc[elements, "geometry"].representative_point()
+        if show_points:
+            df.plot(ax=axis, zorder=2)
+        pos = [(p.xy[0][0], p.xy[1][0]) for p in df]
+    elif points is None and geodata in (None, "adaptive"):
+        try:
+            crs_proj4 = proj.proj4_init
+            cpoints = country_points.to_crs(crs_proj4)
+        except:
+            # PlateCarree
+            cpoints = country_points
+        df = cpoints.loc[elements, "geometry"]
+        pos = [(p.xy[0][0], p.xy[1][0]) for p in df]
+    elif points is None:
+        df  = dataframe.loc[elements, "geometry"].representative_point()
+        pos = [(p.xy[0][0], p.xy[1][0]) for p in df]
+    else:
+        raise ValueError("Invalid value for `points`: {}".format(points))
 
     pos = np.array(pos)
 
